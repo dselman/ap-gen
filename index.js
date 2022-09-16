@@ -4,12 +4,18 @@ const jsonata = require("jsonata");
 
 const transform = require('@accordproject/markdown-transform').transform;
 
-function getTransform(variableName, textValue) {
+function getContractTransform(variableName, textValue) {
     return `(
         $replaceContract := | **.nodes[\`$class\`='org.accordproject.templatemark.ContractDefinition'] | {"$class": "org.accordproject.commonmark.Paragraph"}, ['name', 'elementType']|;
         $replaceClause := | **.nodes[\`$class\`='org.accordproject.templatemark.ClauseDefinition'] | {"$class": "org.accordproject.ciceromark.Clause"}|;
-        $replaceVariable := | **.nodes[\`$class\`='org.accordproject.templatemark.VariableDefinition' and name='${variableName}'] | {"$class": "org.accordproject.commonmark.Text", "text" : \"${textValue}\"}, ['identifiedBy', 'name', 'elementType']|;
-        $ ~> $replaceContract ~> $replaceClause ~> $replaceVariable
+        $ ~> $replaceContract ~> $replaceClause
+    )`;
+}
+
+function getVariableTransform(variableName, textValue) {
+    return `(
+        $replaceVariable := | **.nodes[\`$class\`='org.accordproject.templatemark.VariableDefinition' and name='${variableName}'] | {"$class": "org.accordproject.commonmark.Text", "text" : ${textValue}}, ['identifiedBy', 'name', 'elementType']|;
+        $ ~> $replaceVariable
     )`;
 }
 
@@ -51,19 +57,23 @@ async function run() {
     const variables = queryVariables.evaluate(json);
 
     const values = {
-        shipper: 'Acme Shipping',
-        receiver: 'Dan Warehouses',
-        deliverable: 'Widgets',
-        receiver: 'Dan Selman',
-        businessDays: '10 days',
-        attachment: 'Appendix A'
+        shipper: '"Acme Shipping"',
+        receiver: '"Dan Warehouses"',
+        deliverable: '"Widgets"',
+        receiver: '"Dan Selman"',
+        businessDays: `$formatInteger(123, 'w')`,
+        attachment: '"Appendix A"'
     }
+
+    console.log(`Contract transform...`);
+    const contractTransform = jsonata(getContractTransform());
+    json = contractTransform.evaluate(json);
 
     variables.forEach(variable => {
         const variableValue = values[variable.name];
         if(variableValue) {
-            console.log(`Merging ${variable.name}...`);
-            const mergeVariables = jsonata(getTransform(variable.name, variableValue));
+            console.log(`Variable transform '${variable.name}'...`);
+            const mergeVariables = jsonata(getVariableTransform(variable.name, variableValue));
             json = mergeVariables.evaluate(json);
             delete values[variable.name];
         }
