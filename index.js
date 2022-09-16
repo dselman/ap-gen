@@ -6,8 +6,10 @@ const transform = require('@accordproject/markdown-transform').transform;
 
 function getTransform(variableName, textValue) {
     return `(
+        $replaceContract := | **.nodes[\`$class\`='org.accordproject.templatemark.ContractDefinition'] | {"$class": "org.accordproject.commonmark.Paragraph"}, ['name', 'elementType']|;
+        $replaceClause := | **.nodes[\`$class\`='org.accordproject.templatemark.ClauseDefinition'] | {"$class": "org.accordproject.ciceromark.Clause"}|;
         $replaceVariable := | **.nodes[\`$class\`='org.accordproject.templatemark.VariableDefinition' and name='${variableName}'] | {"$class": "org.accordproject.commonmark.Text", "text" : \"${textValue}\"}, ['identifiedBy', 'name', 'elementType']|;
-        $ ~> $replaceVariable
+        $ ~> $replaceContract ~> $replaceClause ~> $replaceVariable
     )`;
 }
 
@@ -58,18 +60,18 @@ async function run() {
     }
 
     variables.forEach(variable => {
-        console.log(variable.name);
         const variableValue = values[variable.name];
         if(variableValue) {
+            console.log(`Merging ${variable.name}...`);
             const mergeVariables = jsonata(getTransform(variable.name, variableValue));
             json = mergeVariables.evaluate(json);
             delete values[variable.name];
         }
     })
 
-    // console.log(JSON.stringify(result, null,2));
+    // console.log(JSON.stringify(json, null,2));
 
-    const md = await transform(json, 'templatemark', ['markdown_template'], parameters, options);
+    const md = await transform(json, 'ciceromark', ['markdown'], parameters, options);
     console.log(md);
 }
 
