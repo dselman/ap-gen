@@ -1,0 +1,15 @@
+{
+  "name": "ap-gen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@accordproject/markdown-transform": "^0.16.0",
+    "jsonata": "^1.8.6"
+  }
+}
